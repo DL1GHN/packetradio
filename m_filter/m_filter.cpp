@@ -1,35 +1,36 @@
-/*********************************************************************/
-/* Dieses Programm durchsucht bein empfangen einer Mail ob der User  */
-/* im mailinfo-File steht und informiert ihn dann ueber das          */
-/* Eintreffen einer neuen PR-Mail                                    */
-/* Ausserdem wird die Rubrik P gesondert behandelt                   */
-/* => DF3VI POCSACLISTSERVER in der BCM                              */
-/* unbedingt m_filter.h anpassen ! ! !                               */
-/*                                                                   */
-/* Stand 20.11.2002   DH6BB                                          */
-/* Bei Fragen oder Problemen:                                        */
-/* PR    : dh6bb@db0whv.#nds.deu.eu                                  */
-/* e-Mail: dh6bb@darc.de                                             */
-/*                                                                   */
-/* Dez. 2001  DH6BB  Neucodierung in C (aus Perl).                   */
-/* 24.12.2001 DH6BB  Anpassung an DP-Box.                            */
-/* 02.01.2001 DH6BB  Rubrik-P-Mails die nicht fuer Boxcall sind	     */
-/*		     werden jetzt ignoriert.			     */
-/* 18.03.2002 DH6BB  Beseitigung einiger Compiler-Warnings.          */
-/* 18.04.2002 DH6BB  Problem mit der DP-Box beseitigt.               */
-/*                   Empfaenger-Feld lief ueber.                     */
-/* 18.11.2002 DH6BB  Es wird jetzt nur noch eine Import-Datei fuer   */
-/*                   das neue Funkruf-User-Interface generiert.      */
-/*                   Es erfolgt kein Datenbank-Zugriff mehr.         */
-/* 18.11.2002 DH6BB  Es koennen Kepler-Files automatisch kopiert     */
-/*                   werden, wenn diese im Funkruf-User-Interface    */
-/*                   benoetigt werden.                               */
-/* 20.11.2002 DH6BB  Es wird jetzt beim Kepler-Filer auch die Rubrik */
-/*                   mit ausgewertet.                                */
-/* 15.10.2006 DH6BB  OpenBCM 1.07b1 hat das Format der Mail ein      */
-/*                   klein wenig geaendert. Tnx Info DG8NGN/DL9SAU   */
-/* 12.03.2018 DH3WR  Started with DAPNET support implementation      */
-/*********************************************************************/
+//*******************************************************************
+// Dieses Programm durchsucht beim Empfang einer Mail, ob der User  
+// im mailinfo-File steht und informiert ihn dann ueber das          
+// Eintreffen einer neuen PR-Mail                                    
+// Ausserdem wird die Rubrik P gesondert behandelt                   
+// => DF3VI POCSACLISTSERVER in der BCM                              
+// unbedingt m_filter.h anpassen ! ! !                               
+//                                                                   
+// Stand 20.11.2002   DH6BB                                          
+// Bei Fragen oder Problemen:                                        
+// PR    : dh6bb@db0whv.#nds.deu.eu                                  
+// e-Mail: dh6bb@darc.de                                             
+//                                                                   
+// Dez. 2001  DH6BB  Neucodierung in C (aus Perl).                   
+// 24.12.2001 DH6BB  Anpassung an DP-Box.                            
+// 02.01.2001 DH6BB  Rubrik-P-Mails die nicht fuer Boxcall sind	     
+//		     werden jetzt ignoriert.			     
+// 18.03.2002 DH6BB  Beseitigung einiger Compiler-Warnings.          
+// 18.04.2002 DH6BB  Problem mit der DP-Box beseitigt.               
+//                   Empfaenger-Feld lief ueber.                     
+// 18.11.2002 DH6BB  Es wird jetzt nur noch eine Import-Datei fuer   
+//                   das neue Funkruf-User-Interface generiert.      
+//                   Es erfolgt kein Datenbank-Zugriff mehr.         
+// 18.11.2002 DH6BB  Es koennen Kepler-Files automatisch kopiert     
+//                   werden, wenn diese im Funkruf-User-Interface    
+//                   benoetigt werden.                               
+// 20.11.2002 DH6BB  Es wird jetzt beim Kepler-Filer auch die Rubrik 
+//                   mit ausgewertet.                                
+// 15.10.2006 DH6BB  OpenBCM 1.07b1 hat das Format der Mail ein      
+//                   klein wenig geaendert. Tnx Info DG8NGN/DL9SAU   
+// 12.03.2018 DH3WR  Started with DAPNET support implementation    
+// 2020-07-14 DL7NDR DAPNET-UnterstÃ¼tzung lauffÃ¤hig abgeschlossen
+//*******************************************************************
 
 #include "m_filter.h"
 
@@ -285,32 +286,34 @@ void Funkruf(int MailorMess)
 
 
 //********************************************************************
-// Generiere die Funkruf-Datei
+// Generiere den DAPNET-Funkruf-Befehl
 //********************************************************************
 void Sende(char FunkrufText[])
 {
-  # Example:
-  # curl -H "Content-Type: application/json" -X POST -u dl1acb:sehrgeheimespasswort -d '{ "text": "DL1ABC: Das ist eine Sendung über die REST-API", "callSignNames": ["dh1xyz"], "transmitterGroupNames": ["dl-bw"], "emergency": false }' http://dapnet.afu.rwth-aachen.de/api/calls
-  # Maybe nicer implementation with https://curl.haxx.se/libcurl/c/example.html
+// Aufbau eines Funkruf-Befehls:
+// curl -H "Content-Type: application/json" -X POST -u DAPNET_NAME:DAPNET_PASSWORD -d '{ "text": "Mail in Boxcall: FROM TITEL", "callSignNames": ["TO"], "transmitterGroupNames": ["dl-bw"], "emergency": false }' DAPNET-URL
   
-  # Buffer for command line command
+// Buffer for command line command
   char curl_command[2000]="\0";
   
-  # Build up the curl command and add dynamic content
+// Build up the curl command and add dynamic content
   strcpy(curl_command, "curl -H \"Content-Type: application/json\" -X POST -u ");
   strcat(curl_command, DAPNET_NAME);
   strcat(curl_command, ":");
   strcat(curl_command, DAPNET_PASSWORD);
-  strcat(curl_command, " -d '{ \"text": \"");
-  strcat(curl_command, TO);
+  strcat(curl_command, " -d '{ \"text\": \"Mail in ");
+  strcat(curl_command, Boxcall);
   strcat(curl_command, ": ");
-  strcat(curl_command, FunkrufText);
+  strcat(curl_command, FROM);
+  strcat(curl_command, " ");
+  strcat(curl_command, TITEL);
   strcat(curl_command, "\", \"callSignNames\": [\"");
-  strcat(curl_command, tolower(TO);
-  strcat(curl_command, "\"], \"transmitterGroupNames\": [\"all\"], \"emergency\": false }' ");
+  strcat(curl_command, TO);
+  strcat(curl_command, "\"], \"transmitterGroupNames\": [\"dl-bw\"], \"emergency\": false }' "); // statt "dl-bw" besser "all", da unklar wo sich der EmpfÃ¤nger gerade befindet
   strcat(curl_command, DAPNET_URL);
+  strcat(curl_command, " > /dev/null -s");	// verhindert die Ausgabe der BestÃ¤tigungsantwort des DAPNET-Servers in der Mailbox nach Beenden ("/ex") der Mail
 
-  # Execute the command
+// Execute the command
   system(curl_command);
 }
 
@@ -332,7 +335,6 @@ int main(int argc[], char *argv[])
     Dateiname=argv[1];
     Mailerkennung();
     fclose(InFile);
-    return(0);
+    return(0);	
  }
 }
-// Ende von m_filter.cpp
